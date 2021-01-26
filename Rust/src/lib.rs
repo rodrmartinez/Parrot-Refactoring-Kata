@@ -1,48 +1,53 @@
-struct Parrot<'a> {
-    parrot_type: &'a str,
-    number_of_coconuts: usize,
-    voltage: f32,
-    nailed: bool,
+static BASE_SPEED: f32 = 12.0;
+static LOAD_FACTOR:f32 = 9.0;
+
+struct ParrotBase{
+        number_of_coconuts: usize,
+        voltage: f32,
+        nailed: bool,
 }
 
-impl<'a> Parrot<'a> {
-    pub fn speed(&self) -> Result<f32, &'static str> {
-        match self.parrot_type {
-            "european_parrot" => Ok(base_speed()),
-            "african_parrot" => {
-                let african_speed = base_speed() - load_factor() * self.number_of_coconuts as f32;
-                if african_speed > 0.0 { Ok(african_speed) } else { Ok(0.0)}
+struct EuropeanParrot{
+    parrot: ParrotBase,
+}
+
+impl EuropeanParrot{
+    fn speed(&self) -> f32 {
+       return BASE_SPEED;
+    }
+}
+
+struct AfricanParrot{
+    parrot: ParrotBase,
+}
+
+impl AfricanParrot{
+    fn speed(&self) -> f32 {
+        let african_speed = BASE_SPEED - LOAD_FACTOR * self.parrot.number_of_coconuts as f32;
+        if african_speed > 0.0 { return african_speed } else { return 0.0}
+    }
+}
+
+struct NorwegianBlueParrot{
+    parrot: ParrotBase,
+}
+
+impl NorwegianBlueParrot{
+    fn speed(&self) -> f32 {
+        if self.parrot.nailed == true {
+            return 0.0
+        }
+        else {
+            let fixed_base_speed = 24.0;
+            let base_speed_for_voltage = self.parrot.voltage * BASE_SPEED;
+            if base_speed_for_voltage < fixed_base_speed {
+               return base_speed_for_voltage
             }
-            "norwegian_blue_parrot" => {
-                if self.nailed == true {
-                    Ok(0.0)
-                }
-                else {
-                    Ok(compute_base_speed_for_voltage(self.voltage))
-                }
+            else {
+                return fixed_base_speed
             }
-            _ => Err("Should be unreachable!")
         }
     }
-}
-
-fn compute_base_speed_for_voltage(voltage: f32) -> f32 {
-    let fixed_base_speed = 24.0;
-    let base_speed_for_voltage = voltage * base_speed();
-    if base_speed_for_voltage < fixed_base_speed {
-        base_speed_for_voltage
-    }
-    else {
-        fixed_base_speed
-    }
-}
-
-fn load_factor() -> f32 {
-    9.0
-}
-
-fn base_speed() -> f32 {
-    12.0
 }
 
 #[cfg(test)]
@@ -51,61 +56,67 @@ mod tests {
 
     #[test]
     fn european_parrot_speed() {
-        let parrot = Parrot { parrot_type: "european_parrot",
-                              number_of_coconuts: 0,
-                              voltage: 0.0,
-                              nailed: false };
-        assert_eq!(parrot.speed().unwrap(), 12.0);
+        let test = EuropeanParrot { parrot: ParrotBase{ number_of_coconuts: 0, voltage: 0.0, nailed: false }};
+        assert_eq!(test.speed(), 12.0); 
     }
 
     #[test]
-    fn african_parrot_speed_with_one_coconut() {
-        let parrot = Parrot { parrot_type: "african_parrot",
-                              number_of_coconuts: 1,
-                              voltage: 0.0,
-                              nailed: false };
-        assert_eq!(parrot.speed().unwrap(), 3.0);
+    fn african_parrot_speed(){
+        struct Test {
+            input: AfricanParrot,
+            output: f32,
+        }
+
+        let tests = vec![
+            Test {
+                input: AfricanParrot { parrot: ParrotBase{ number_of_coconuts: 1, voltage: 0.0, nailed: false}},
+                output: 3.0
+            },
+            Test {
+                input: AfricanParrot { parrot: ParrotBase{ number_of_coconuts: 2, voltage: 0.0, nailed: false }},
+                output: 0.0
+            },
+            Test {
+                input: AfricanParrot { parrot: ParrotBase{ number_of_coconuts: 0, voltage: 0.0, nailed: false}},
+                output: 12.0
+            },
+        ];
+
+        for test in tests {
+             let result = test.input;
+             assert_eq!(result.speed(), test.output);
+        }
+    
     }
 
     #[test]
-    fn african_parrot_speed_with_two_coconut() {
-        let parrot = Parrot { parrot_type: "african_parrot",
-                              number_of_coconuts: 2,
-                              voltage: 0.0,
-                              nailed: false };
-        assert_eq!(parrot.speed().unwrap(), 0.0);
+    fn norwegian_blue_parrot_speed(){
+        struct Test {
+            input: NorwegianBlueParrot,
+            output: f32,
+        }
+
+        let tests = vec![
+            Test {
+                input:  NorwegianBlueParrot { parrot: ParrotBase{ number_of_coconuts: 2, voltage: 0.0, nailed: true }},
+                output: 0.0
+            },
+            Test {
+                input: NorwegianBlueParrot { parrot: ParrotBase{ number_of_coconuts: 0, voltage: 1.5, nailed: false }},
+                output: 18.0
+            },
+            Test {
+                input: NorwegianBlueParrot { parrot: ParrotBase{ number_of_coconuts: 0, voltage: 4.0, nailed: false }},
+                output: 24.0
+            },
+        ];
+
+        for test in tests {
+             let result = test.input;
+             assert_eq!(result.speed(), test.output);
+        }
+    
     }
 
-    #[test]
-    fn african_parrot_speed_with_no_coconut() {
-        let parrot = Parrot { parrot_type: "african_parrot",
-                              number_of_coconuts: 0,
-                              voltage: 0.0,
-                              nailed: false };
-        assert_eq!(parrot.speed().unwrap(), 12.0);
-    }
-    #[test]
-    fn nailed_norwegian_blue_parrot() {
-        let parrot = Parrot { parrot_type: "norwegian_blue_parrot",
-                              number_of_coconuts: 0,
-                              voltage: 1.5,
-                              nailed: true };
-        assert_eq!(parrot.speed().unwrap(), 0.0);
-    }
-    #[test]
-    fn not_nailed_norwegian_blue_parrot() {
-        let parrot = Parrot { parrot_type: "norwegian_blue_parrot",
-                              number_of_coconuts: 0,
-                              voltage: 1.5,
-                              nailed: false };
-        assert_eq!(parrot.speed().unwrap(), 18.0);
-    }
-    #[test]
-    fn not_nailed_norwegian_blue_parrot_with_high_voltage() {
-        let parrot = Parrot { parrot_type: "norwegian_blue_parrot",
-                              number_of_coconuts: 0,
-                              voltage: 4.0,
-                              nailed: false };
-        assert_eq!(parrot.speed().unwrap(), 24.0);
-    }
+ 
 }
